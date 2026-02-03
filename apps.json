@@ -3,12 +3,24 @@
     "name": "Calendar",
     "url": "https://hash-calendar.netlify.app/",
     "icon": "fa-solid fa-calendar-days",
-    "color": "#1a73e8"
+    "color": "#1a73e8",
+    "category": "Productivity",
+    "tagline": "Private scheduling in your URL.",
+    "rating": 4.9,
+    "reviews": "2.4k",
+    "featured": true
   },
   {
     "name": "Spreadsheet",
     "url": "https://spreadsheetlive.netlify.app/",
     "icon": "fa-solid fa-table-cells",
-    "color": "#107c41"
+    "color": "#107c41",
+    "category": "Productivity",
+    "tagline": "Collaborative sheets without a server.",
+    "rating": 4.8,
+    "reviews": "1.8k",
+    "featured": true
   }
+ 
 ]
+

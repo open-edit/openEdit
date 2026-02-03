@@ -1,165 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Open Edit - Apps</title>
-  <meta name="description" content="Open Edit apps page powered by JSON data.">
-  <meta name="theme-color" content="#f8f9fa" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Apps - Open Edit</title>
+  <meta name="description" content="Open Edit - Privacy-first, serverless tools.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
 
   <style>
-    /* Keep index.html look, with small iframe-safe spacing overrides */
-    html,
+    :root {
+      --bg-color: #f2f2f7;
+      --panel-bg: rgba(255, 255, 255, 0.82);
+      --text-primary: #000000;
+      --text-secondary: #8e8e93;
+      --accent-primary: #007aff;
+      --card-bg: #ffffff;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --safe-area-bottom: env(safe-area-inset-bottom);
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #000000;
+      --panel-bg: rgba(28, 28, 30, 0.85);
+      --text-primary: #ffffff;
+      --text-secondary: #8e8e93;
+      --accent-primary: #0a84ff;
+      --card-bg: #1c1c1e;
+      --border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
-      min-height: 100%;
       margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+      background: var(--bg-color);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .apps-only .hero {
-      padding: clamp(56px, 12vw, 120px) 0 clamp(28px, 8vw, 80px);
+    /* Layout */
+    main {
+      width: 100%;
+      max-width: 1000px;
+      padding: 60px 24px 80px;
+      flex: 1;
     }
 
-    .apps-only .apps-section {
-      padding: 20px 0 64px;
+    .header {
+      margin-bottom: 50px;
+      text-align: center;
     }
 
-    .apps-only .apps-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-      gap: 24px;
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+      margin-bottom: 24px;
     }
 
-    .launcher-status {
-      margin: 14px 0 0;
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #007aff, #5856d6);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    }
+
+    .page-title {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -1.5px;
+    }
+
+    .page-subtitle {
+      font-size: 1.1rem;
       color: var(--text-secondary);
+      margin-top: 12px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    /* Apps Grid */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    /* iOS Style Minimalist Card */
+    .app-card {
+      background: var(--card-bg);
+      border-radius: 22px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .app-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      border-color: var(--accent-primary);
+    }
+
+    [data-theme="dark"] .app-card:hover {
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .app-card:active {
+      transform: scale(0.96) translateY(0);
+    }
+
+    .app-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 1.8rem;
+      background: var(--bg-color);
+      color: var(--accent-primary);
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+
+    .app-card:hover .app-icon {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .app-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .app-name {
+      font-weight: 600;
+      font-size: 1.15rem;
+      margin: 0 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-tagline {
       font-size: 0.95rem;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .action-icon {
+      opacity: 0;
+      color: var(--accent-primary);
+      transition: 0.3s ease;
+      transform: translateX(-10px);
+    }
+
+    .app-card:hover .action-icon {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    #loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+      grid-column: 1 / -1;
+    }
+
+    /* Mobile Adjustments */
+    @media (max-width: 640px) {
+      main {
+        padding: 40px 20px;
+      }
+
+      .page-title {
+        font-size: 2.22rem;
+      }
+
+      .apps-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
-<body class="apps-only">
-  <div class="app">
-    <main>
-      <section class="hero">
-        <div class="max-width-container hero-content">
-          <div class="hero-label">The Privacy-First Ecosystem</div>
-          <h1 class="hero-title">Your Data.<br>Your URL.</h1>
-          <p class="hero-subtitle">
-            A suite of powerful, serverless tools that run entirely in your browser.
-            No accounts, no tracking, just instant utility.
-          </p>
-        </div>
-      </section>
 
-      <section class="apps-section">
-        <div class="max-width-container">
-          <div class="section-header">
-            <h2 class="section-title">Explore Apps</h2>
-            <p style="color: var(--text-secondary);">Tap to launch instantly.</p>
-          </div>
+<body>
 
-          <div id="apps-grid" class="apps-grid"></div>
-          <p id="launcher-status" class="launcher-status" aria-live="polite">Loading apps...</p>
-        </div>
-      </section>
-    </main>
-  </div>
+  <main>
+    <header class="header">
+      <a href="#" class="brand">
+        <div class="brand-mark">#</div>
+      </a>
+      <h1 class="page-title">Tools</h1>
+      <p class="page-subtitle">Serverless productivity apps for your workflow.</p>
+    </header>
 
-  <script type="module">
-    const appsGrid = document.getElementById('apps-grid');
-    const status = document.getElementById('launcher-status');
+    <div id="apps-grid" class="apps-grid">
+      <div id="loading">Loading tools...</div>
+    </div>
+  </main>
 
-    const fallbackDescriptions = {
-      Calendar: 'A private, sharable calendar that saves all your events directly in the URL hash.',
-      Spreadsheet: 'Collaborative, real-time spreadsheet. Edit with friends via P2P connection.',
-      Word: 'Distraction-free text editor. Write, format, and save directly to your URL.',
-      Kanban: 'Visual project management. Sort tasks with drag and drop columns.',
-      Code: 'Syntax-highlighted snippet editor. Share code properly with a simple link.',
-      Whiteboard: 'Infinite canvas for sketches and diagrams. Visualize ideas instantly.',
-      Notes: 'Sticky notes for quick thoughts. Color-coded, auto-saved, and searchable.',
-      'PDF Tools': 'Merge and modify PDFs locally. Privacy-first, no server uploads.',
-      Focus: 'Stay productive with a distraction-free Pomodoro timer and task list.'
-    };
-
-    function setStatus(message) {
-      status.textContent = message;
-      status.hidden = message.length === 0;
-    }
-
-    function createCard(app) {
-      const card = document.createElement('a');
-      const extraClass = typeof app.className === 'string' ? ` ${app.className}` : '';
-      card.className = `app-card glass${extraClass}`;
-      card.href = app.url;
-      card.target = '_blank';
-      card.rel = 'noopener noreferrer';
-
-      const iconWrap = document.createElement('div');
-      iconWrap.className = 'app-card-icon';
-
-      const icon = document.createElement('i');
-      icon.className = app.icon;
-      iconWrap.appendChild(icon);
-
-      const content = document.createElement('div');
-      content.className = 'app-card-content';
-
-      const title = document.createElement('h3');
-      title.className = 'app-card-title';
-      title.textContent = app.name;
-
-      const desc = document.createElement('p');
-      desc.className = 'app-card-desc';
-      desc.textContent = app.description || fallbackDescriptions[app.name] || 'Launch this app.';
-
-      const link = document.createElement('div');
-      link.className = 'app-card-link';
-      link.innerHTML = 'Launch App <i class="fa-solid fa-arrow-right"></i>';
-
-      content.appendChild(title);
-      content.appendChild(desc);
-      content.appendChild(link);
-      card.appendChild(iconWrap);
-      card.appendChild(content);
-      return card;
-    }
-
-    async function loadApps() {
+  <script>
+    async function fetchApps() {
       try {
-        const response = await fetch('./apps.json', { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error(`Failed with status ${response.status}`);
-        }
-
+        const response = await fetch('./apps.json');
         const apps = await response.json();
-        if (!Array.isArray(apps)) {
-          throw new Error('apps.json must be an array');
-        }
-
-        const fragment = document.createDocumentFragment();
-        apps.forEach((app) => {
-          if (app?.name && app?.url && app?.icon) {
-            fragment.appendChild(createCard(app));
-          }
-        });
-
-        appsGrid.innerHTML = '';
-        appsGrid.appendChild(fragment);
-        setStatus('');
-      } catch (error) {
-        console.error('Unable to load apps.json', error);
-        setStatus('Could not load app data.');
+        renderApps(apps);
+      } catch (err) {
+        console.error('Error fetching apps:', err);
+        document.getElementById('apps-grid').innerHTML = '<p>Failed to load apps.</p>';
       }
     }
 
-    loadApps();
+    function renderApps(apps) {
+      const grid = document.getElementById('apps-grid');
+      grid.innerHTML = '';
+
+      apps.forEach(app => {
+        grid.appendChild(createAppCard(app));
+      });
+    }
+
+    function createAppCard(app) {
+      const card = document.createElement('a');
+      card.href = app.url;
+      card.className = 'app-card';
+      card.target = '_blank';
+
+      card.innerHTML = `
+        <div class="app-icon" style="color: ${app.color}">
+          <i class="${app.icon}"></i>
+        </div>
+        <div class="app-info">
+          <h3 class="app-name">${app.name}</h3>
+          <p class="app-tagline">${app.tagline}</p>
+        </div>
+        <div class="action-icon">
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+      `;
+      return card;
+    }
+
+    // Theme detection
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.body.setAttribute('data-theme', 'dark');
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(e => {
+      if (e.matches) document.body.setAttribute('data-theme', 'dark');
+      else document.body.removeAttribute('data-theme');
+    });
+
+    fetchApps();
   </script>
 </body>
+
 </html>

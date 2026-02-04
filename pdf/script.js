@@ -1,5 +1,5 @@
 import { mergePDFPages, splitPDF } from './modules/pdf_ops.js';
-import { updateFileList, getFiles, clearFiles, getMergeSelection, setLoadingState, setUIMode } from './modules/ui.js';
+import { updateFileList, getFiles, clearFiles, getMergeSelection, setLoadingState, setUIMode, updateSplitSelectionFromInput } from './modules/ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (window.pdfjsLib) {
@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentToolDesc = document.getElementById('current-tool-desc');
     const splitOptions = document.getElementById('split-options');
     const splitRangesInput = document.getElementById('split-ranges-input');
+    const mergeOptions = document.getElementById('merge-options');
+    const mergeFilenameInput = document.getElementById('merge-filename');
     const toolButtons = Array.from(document.querySelectorAll('.tool-btn[data-tool]'));
     const splitDownloadModal = document.getElementById('split-download-modal');
     const splitZipBtn = document.getElementById('split-zip-btn');
@@ -32,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dropzoneSubtitle: 'or click to select files',
             processLabel: '<i class="fa-solid fa-gear"></i> Merge Files',
             multiple: true,
-            showSplitOptions: false
+            showSplitOptions: false,
+            showMergeOptions: true
         },
         split: {
             title: 'Split PDF',
@@ -41,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dropzoneSubtitle: 'or click to select a file',
             processLabel: '<i class="fa-solid fa-gear"></i> Split File',
             multiple: false,
-            showSplitOptions: true
+            showSplitOptions: true,
+            showMergeOptions: false
         }
     };
 
@@ -58,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
         processBtn.innerHTML = config.processLabel;
         fileInput.multiple = config.multiple;
         splitOptions.classList.toggle('hidden', !config.showSplitOptions);
+        if (mergeOptions) {
+            mergeOptions.classList.toggle('hidden', !config.showMergeOptions);
+        }
     };
     
     const closeSplitDownloadModal = (choice = null) => {
@@ -145,6 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Escape' && !splitDownloadModal.classList.contains('hidden')) {
             closeSplitDownloadModal();
         }
+    });
+
+    splitRangesInput.addEventListener('input', (e) => {
+        updateSplitSelectionFromInput(e.target.value);
     });
 
     // --- Files Handling ---
@@ -254,7 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentTool === 'merge') {
                 const mergedPdfBytes = await mergePDFPages(mergeSelection);
                 const mergedBlob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-                saveAs(mergedBlob, 'merged_document.pdf');
+                const filename = (mergeFilenameInput?.value.trim() || 'merged_document') + '.pdf';
+                saveAs(mergedBlob, filename);
             } else {
                 const splitParts = await splitPDF(files[0], splitRangesInput.value);
                 if (splitDownloadMode === 'zip') {
@@ -278,24 +290,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Theme Toggle ---
     
      themeBtn.addEventListener('click', () => {
-        const isDark = document.body.getAttribute('data-theme') === 'dark';
-        if (!isDark) {
-            document.body.setAttribute('data-theme', 'dark');
-            localStorage.setItem('theme', 'dark');
-            themeBtn.querySelector('i').className = 'fa-solid fa-sun';
-        } else {
-            document.body.removeAttribute('data-theme');
-            localStorage.setItem('theme', 'light');
-            themeBtn.querySelector('i').className = 'fa-solid fa-moon';
-        }
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
+
+    // --- App Launcher Modal ---
+    const appLauncherBtn = document.getElementById('app-launcher-btn');
+    const appLauncherModal = document.getElementById('app-launcher-modal');
+    const appLauncherCloseBtn = document.getElementById('app-launcher-close');
+    const appLauncherIframe = document.getElementById('app-launcher-iframe');
+    const appLauncherBackdrop = appLauncherModal ? appLauncherModal.querySelector('.modal-backdrop') : null;
+    let bodyOverflowBeforeOpen = '';
+
+    const openAppLauncher = () => {
+        if (!appLauncherIframe.getAttribute('src')) {
+             appLauncherIframe.setAttribute('src', appLauncherIframe.dataset.src || 'https://open-edit.netlify.app/apps.html');
+        }
+        bodyOverflowBeforeOpen = document.body.style.overflow || '';
+        document.body.style.overflow = 'hidden';
+        appLauncherModal.classList.remove('hidden');
+        appLauncherBtn.setAttribute('aria-expanded', 'true');
+    };
+
+    const closeAppLauncher = () => {
+        appLauncherModal.classList.add('hidden');
+        appLauncherBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = bodyOverflowBeforeOpen;
+    };
+
+    if (appLauncherBtn && appLauncherModal) {
+        appLauncherBtn.addEventListener('click', (e) => {
+             e.stopPropagation();
+             if (appLauncherModal.classList.contains('hidden')) {
+                 openAppLauncher();
+             } else {
+                 closeAppLauncher();
+             }
+        });
+
+        if (appLauncherCloseBtn) {
+            appLauncherCloseBtn.addEventListener('click', closeAppLauncher);
+        }
+
+        if (appLauncherBackdrop) {
+           appLauncherBackdrop.addEventListener('click', closeAppLauncher);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !appLauncherModal.classList.contains('hidden')) {
+                closeAppLauncher();
+            }
+        });
+    }
 
     // Load saved theme
     const savedTheme = localStorage.getItem('theme');
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
-        document.body.setAttribute('data-theme', 'dark');
-        themeBtn.querySelector('i').className = 'fa-solid fa-sun';
+        document.body.classList.add('dark-mode');
     }
 
     setUIMode(currentTool);

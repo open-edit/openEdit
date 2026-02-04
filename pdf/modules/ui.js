@@ -1,6 +1,7 @@
 let currentMode = 'merge';
 let currentFiles = [];
 let mergePages = [];
+let splitPages = [];
 let dragPageIndex = null;
 let fileIdCounter = 0;
 
@@ -15,6 +16,7 @@ const pdfPreviewCloseBtn = document.getElementById('pdf-preview-close');
 const pdfPreviewLoadingEl = document.getElementById('pdf-preview-loading');
 const pdfPreviewLoadingTextEl = document.getElementById('pdf-preview-loading-text');
 const pdfPreviewPagesEl = document.getElementById('pdf-preview-pages');
+const toolsFooterEl = document.getElementById('tools-footer');
 
 let previewRenderToken = 0;
 let previewFileId = null;
@@ -304,14 +306,7 @@ function addFileEntryRow(file, index, containerEl) {
     const actionsEl = document.createElement('div');
     actionsEl.className = 'file-actions';
 
-    if (currentMode === 'merge' && file.bytes) {
-        const previewBtn = document.createElement('button');
-        previewBtn.className = 'secondary-btn file-preview-btn';
-        previewBtn.type = 'button';
-        previewBtn.innerHTML = '<i class="fa-solid fa-eye"></i> View';
-        previewBtn.addEventListener('click', openPreview);
-        actionsEl.appendChild(previewBtn);
-    }
+    // Preview button removed as the row is clickable
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove-btn';
@@ -514,9 +509,140 @@ function renderMergeView() {
     fileListEl.appendChild(pageGridEl);
 }
 
+function updateSplitInputFromSelection() {
+    const splitRangesInput = document.getElementById('split-ranges-input');
+    if (!splitRangesInput) return;
+
+    const selectedIndices = splitPages
+        .filter(p => p.selected)
+        .map(p => p.pageNumber);
+    
+    if (selectedIndices.length === 0) {
+        splitRangesInput.value = '';
+        return;
+    }
+
+    // Convert keys to ranges (e.g., 1,2,3 -> 1-3)
+    let ranges = [];
+    let start = selectedIndices[0];
+    let prev = start;
+
+    for (let i = 1; i < selectedIndices.length; i++) {
+        if (selectedIndices[i] === prev + 1) {
+            prev = selectedIndices[i];
+        } else {
+            ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+            start = selectedIndices[i];
+            prev = start;
+        }
+    }
+    ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+
+    splitRangesInput.value = ranges.join(', ');
+}
+
+export function updateSplitSelectionFromInput(inputValue) {
+    if (!inputValue.trim()) {
+        splitPages.forEach(p => p.selected = false);
+        render();
+        return;
+    }
+
+    const parts = inputValue.split(',').map(s => s.trim()).filter(Boolean);
+    const selectedSet = new Set();
+    const maxPage = splitPages.length;
+
+    parts.forEach(part => {
+        const match = part.match(/^(\d+)(?:-(\d+))?$/);
+        if (match) {
+            const start = parseInt(match[1], 10);
+            const end = match[2] ? parseInt(match[2], 10) : start;
+            if (!isNaN(start)) {
+                for (let i = start; i <= end; i++) {
+                    if (i >= 1 && i <= maxPage) {
+                        selectedSet.add(i);
+                    }
+                }
+            }
+        }
+    });
+
+    splitPages.forEach(p => {
+        p.selected = selectedSet.has(p.pageNumber);
+    });
+    render();
+}
+
+function createSplitPageCard(page, index) {
+    const cardEl = document.createElement('article');
+    cardEl.className = 'page-card';
+    if (page.selected) {
+        cardEl.classList.add('selected');
+    }
+
+    // Click to toggle selection
+    cardEl.style.cursor = 'pointer';
+    cardEl.addEventListener('click', (e) => {
+        // Prevent triggering if clicked on specific interactive elements if any
+        page.selected = !page.selected;
+        updateSplitInputFromSelection();
+        render();
+    });
+
+    const checkbox = document.createElement('div');
+    checkbox.className = 'page-card-checkbox';
+    cardEl.appendChild(checkbox);
+
+    const previewEl = document.createElement(page.thumbnail ? 'img' : 'div');
+    previewEl.className = page.thumbnail ? 'page-thumb' : 'page-thumb page-thumb-placeholder';
+    if (page.thumbnail) {
+        previewEl.src = page.thumbnail;
+        previewEl.alt = `${page.fileName} - page ${page.pageNumber}`;
+        previewEl.loading = 'lazy';
+    } else {
+        previewEl.textContent = `Page ${page.pageNumber}`;
+    }
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'page-meta';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'page-label';
+    labelEl.style.textAlign = 'center';
+    labelEl.style.width = '100%';
+    labelEl.textContent = `Page ${page.pageNumber}`;
+    metaEl.appendChild(labelEl);
+
+    cardEl.appendChild(previewEl);
+    cardEl.appendChild(metaEl);
+
+    return cardEl;
+}
+
 function renderSplitView() {
     fileListEl.innerHTML = '';
-    currentFiles.forEach((file, index) => addFileEntryRow(file, index, fileListEl));
+    
+    // File info
+    if (currentFiles.length > 0) {
+        const infoWrap = document.createElement('div');
+        infoWrap.className = 'split-file-info';
+        // Reuse addFileEntryRow but maybe simpler container
+        addFileEntryRow(currentFiles[0], 0, infoWrap);
+        fileListEl.appendChild(infoWrap);
+    }
+
+    if (splitPages.length > 0) {
+        const hintEl = document.createElement('p');
+        hintEl.className = 'merge-hint';
+        hintEl.textContent = 'Click pages to select/deselect them for extraction. Or type ranges above.';
+        fileListEl.appendChild(hintEl);
+
+        const pageGridEl = document.createElement('div');
+        pageGridEl.className = 'page-grid';
+        splitPages.forEach((page, index) => {
+            pageGridEl.appendChild(createSplitPageCard(page, index));
+        });
+        fileListEl.appendChild(pageGridEl);
+    }
 }
 
 function render() {
@@ -524,6 +650,7 @@ function render() {
         fileListEl.classList.add('hidden');
         actionBarEl.classList.add('hidden');
         dropzoneEl.style.display = 'flex';
+        updateFooterVisibility();
         return;
     }
 
@@ -533,10 +660,23 @@ function render() {
 
     if (currentMode === 'merge') {
         renderMergeView();
+        updateFooterVisibility();
         return;
     }
 
     renderSplitView();
+    updateFooterVisibility();
+}
+
+function updateFooterVisibility() {
+    if (!toolsFooterEl) return;
+    
+    const isSplitVisible = !document.getElementById('split-options')?.classList.contains('hidden');
+    const isMergeVisible = !document.getElementById('merge-options')?.classList.contains('hidden');
+    const isActionVisible = !actionBarEl.classList.contains('hidden');
+    
+    // Show footer if either component is visible
+    toolsFooterEl.classList.toggle('hidden', !isSplitVisible && !isMergeVisible && !isActionVisible);
 }
 
 export function setUIMode(mode) {
@@ -545,6 +685,8 @@ export function setUIMode(mode) {
         closePdfPreviewModal();
     }
     render();
+    // Force footer update after mode switch since split-options visibility changes in script.js
+    setTimeout(updateFooterVisibility, 0);
 }
 
 export function setLoadingState(isLoading, message = 'Loading PDF pages...') {
@@ -587,14 +729,42 @@ export async function updateFileList(newFiles, onProgress) {
         return;
     }
 
-    const splitRecords = Array.from(newFiles).map((file) => ({
-        id: createFileId(),
-        rawFile: file,
-        name: file.name,
-        size: file.size
-    }));
+    const splitRecords = [];
+    // For split mode, we also want previews now
+    for (let index = 0; index < newFiles.length; index += 1) {
+        const file = newFiles[index];
+        if (progressHandler) {
+            progressHandler({ index, total: newFiles.length, fileName: file.name });
+        }
+        // Reuse buildMergeFileRecord since it generates previews and ID
+        splitRecords.push(await buildMergeFileRecord(file));
+    }
 
     currentFiles = [...currentFiles, ...splitRecords];
+    
+    // Clear and rebuild split pages for the NEW file (Split only supports one file effectively, 
+    // but code structure allows array. We usually take first.)
+    splitPages = [];
+    if (currentFiles.length > 0) {
+        const mainFile = currentFiles[0]; // Take the first one if multiple dropped
+        if (currentFiles.length > 1) {
+             // If multiple were added, keep only the first one to avoid confusion in Split mode
+             currentFiles = [mainFile];
+        }
+        
+        mainFile.previews.forEach((preview) => {
+            splitPages.push({
+                id: `${mainFile.id}-p${preview.pageNumber}`,
+                fileId: mainFile.id,
+                fileName: mainFile.name,
+                pageIndex: preview.pageIndex,
+                pageNumber: preview.pageNumber,
+                thumbnail: preview.thumbnail,
+                selected: false
+            });
+        });
+    }
+
     render();
 }
 
@@ -625,6 +795,7 @@ export function getMergeSelection() {
 export function clearFiles() {
     currentFiles = [];
     mergePages = [];
+    splitPages = [];
     dragPageIndex = null;
     closePdfPreviewModal();
     render();
@@ -638,6 +809,8 @@ export function removeFile(index) {
         if (previewFileId === removedFile.id) {
             closePdfPreviewModal();
         }
+    } else if (currentMode === 'split') {
+        splitPages = [];
     }
 
     render();
